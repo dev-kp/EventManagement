@@ -1,7 +1,9 @@
 var express = require("express");
 var router = express.Router();
-const User = require("../models/User"); // Ensure User model is imported
-require("dotenv").config(); // Load environment variables
+const User = require("../models/User");
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+require("dotenv").config();
 
 /* GET users listing. */
 router.get("/", async function (req, res) {
@@ -14,67 +16,82 @@ router.get("/", async function (req, res) {
   }
 });
 
-/* ✅ REGISTER ROUTE */
-router.post("/register", async function (req, res) {
+/* REGISTER ROUTE */
+router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // ✅ Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields (name, email, password) are required" });
-    }
-
-    // ✅ Check if user already exists
+    // Check if the user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: 'User already exists' });
     }
 
-    // ✅ Create new user
-    const newUser = new User({ name, email, password });
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Save to database
+    // Create a new user
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    // Save the user to the database
     await newUser.save();
 
-    res.status(201).json({ message: "User registered successfully", user: newUser });
-  } catch (err) {
-    console.error("Registration Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    // Generate a JWT
+    const token = jwt.sign(
+      { userId: newUser._id, email: newUser.email },
+      process.env.JWT_SECRET, // Secret key (store in environment variables)
+      { expiresIn: '1h' } // Token expiration time
+    );
+
+    // Send the token to the client
+    res.status(201).json({ token });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 
-/* ✅ LOGIN ROUTE (No Encryption) */
-router.post("/login", async function (req, res) {
+
+router.post('/login', async function (req, res) {
   try {
     const { email, password } = req.body;
-
-    // ✅ Validate input
+    // Validate input
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // ✅ Check if user exists
+    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    // ✅ Compare passwords
-    if (user.password !== password) {
-      return res.status(400).json({ message: "Invalid email or password" });
+    // Compare passwords securely
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
-
-    // ✅ Send success response
-    res.status(200).json({ message: "Login Successful", user });
+    // Generate a JWT
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    // Send success response
+    res.status(200).json({ message: 'Login Successful', user, token });
   } catch (err) {
-    console.error("Login Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error('Login Error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
 
-/* ✅ DELETE USER */
+/* DELETE USER */
 router.delete("/:id", async function (req, res) {
   try {
     const { id } = req.params;
@@ -94,7 +111,7 @@ router.delete("/:id", async function (req, res) {
 });
 
 
-/* ✅ UPDATE USER */
+/* UPDATE USER */
 router.patch("/:id", async function (req, res) {
   try {
     const { id } = req.params;
