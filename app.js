@@ -14,7 +14,7 @@ var app = express();
 require("./db");
 
 // ✅ Define allowed origins for CORS
-const allowedOrigins = ["http://localhost:3000",]; // Add your frontend URLs here
+const allowedOrigins = ["http://localhost:3000", "https://frontendevnet.vercel.app"]; // Add your frontend URLs here
 
 app.use(
   cors({
