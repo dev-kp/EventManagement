@@ -1,23 +1,29 @@
-const index = require("mongoose");
-require("dotenv").config();
+// In your db.js file
+const mongoose = require('mongoose');
 
-
-// const { MONGO_USERNAME, MONGO_PASSWORD, MONGO_HOSTNAME, MONGO_PORT, MONGO_DB } =
-//   process.env;
-
-const options = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    connectTimeoutMS: 10000,
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 30000,
+        });
+        console.log('MongoDB connected successfully');
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1); // Exit with failure
+    }
 };
-const url = process.env.MONGO_URI;
 
-index
-    .connect(url, options)
-    .then(function () {
-        console.log("MongoDB is connected");
+connectDB();
 
-    })
-    .catch(function (err) {
-        console.log(err, "Mongoose Could Not connect");
-    });
+// Add event listeners for connection issues
+mongoose.connection.on('error', err => {
+    console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected');
+});
+
+module.exports = mongoose;
