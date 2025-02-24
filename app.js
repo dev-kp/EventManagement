@@ -16,14 +16,22 @@ require("./db");
 // ✅ Define allowed origins for CORS
 const allowedOrigins = ["http://localhost:3000", "https://frontendevnet.vercel.app"]; // Add your frontend URLs here
 
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       }
+//       return callback(new Error("CORS policy does not allow this origin"), false);
+//     },
+//     credentials: true, // Allow cookies/auth headers if needed
+//   })
+// );
+
+// Allow all origins for CORS
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("CORS policy does not allow this origin"), false);
-    },
+    origin: '*', // This allows all origins
     credentials: true, // Allow cookies/auth headers if needed
   })
 );
